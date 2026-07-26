@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# 秘密情報
+.env
+
+# 利用者ごとのローカル設定 (config.example.yaml をコピーして作る)
+config/config.yaml
+
+# 子供のプロフィール・会話ログ・使用量・音声キャッシュ (すべて個人情報を含む)
+data/
+
+.pytest_cache/
+.ruff_cache/

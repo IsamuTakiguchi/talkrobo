@@ -1,0 +1,100 @@
+# talkrobo 設定ファイル
+# このファイルを config/config.yaml にコピーして編集してください。
+#   cp config/config.example.yaml config/config.yaml
+
+# 使うペルソナ (config/personas/<name>.yaml)
+persona: pikachu
+
+# ---------------------------------------------------------------
+# 子供の情報
+#   name を空のままにしておくと、初回起動時にロボットが音声で
+#   「きみのなまえは なんていうの？」と聞いてくれます。
+#   ここに書いておけば、その質問をスキップできます。
+# ---------------------------------------------------------------
+child:
+  name: ""          # 例: "はると"。空なら初回に音声で聞く
+  reading: ""       # 例: "ハルト"。空なら name をそのまま読ませる
+  honorific: "くん" # "くん" / "ちゃん" / "" (呼び捨て)
+  age: 6
+
+# ---------------------------------------------------------------
+# Claude API
+# ---------------------------------------------------------------
+llm:
+  # claude-haiku-4-5 : 最安・最速 (既定)
+  # claude-sonnet-5  : バランス型
+  # claude-opus-5    : 最高品質
+  model: "claude-haiku-4-5"
+  max_tokens: 300    # 返事は2〜3文なので十分。暴走時のコスト上限も兼ねる
+  history_turns: 8   # 送る直近ターン数。増やすと文脈は増えるが入力コストも増える
+  effort: "low"      # opus-5 / sonnet-5 のみ有効 (haiku では自動的に無視)
+
+# ---------------------------------------------------------------
+# 音声入力 (STT) — ローカル実行なので無料
+# ---------------------------------------------------------------
+stt:
+  model_size: "small"    # tiny / base / small / medium。Pi4 なら base 推奨
+  compute_type: "int8"
+  device: "auto"
+  language: "ja"
+
+# ---------------------------------------------------------------
+# 音声出力 (TTS) — VOICEVOX ENGINE をローカルで起動しておくこと
+#   docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+# ---------------------------------------------------------------
+tts:
+  url: "http://127.0.0.1:50021"
+  timeout: 20.0
+
+audio:
+  sample_rate: 16000
+  max_record_seconds: 15.0
+  input_device: null    # null で既定デバイス。`python -m talkrobo --devices` で一覧表示
+  output_device: null
+
+# ---------------------------------------------------------------
+# 相づち / 間つなぎ (無反応の時間を作らないための設定)
+# ---------------------------------------------------------------
+filler:
+  enabled: true
+  ack_after: 0.3       # 「ピカ？」など受け止めの相づち
+  thinking_after: 1.5  # 「え〜っとね…」など考え中
+  wait_after: 3.5      # 「もうちょっとまってね〜」
+  timeout_after: 8.0   # 諦めて聞き直す
+
+# ---------------------------------------------------------------
+# 保護者向け: 利用時間の制限
+# ---------------------------------------------------------------
+limits:
+  daily_limit_minutes: 30   # 0 で無制限
+  quiet_start: "20:00"      # この時刻から
+  quiet_end: "07:00"        # この時刻までは「おやすみ中」で反応しない。空文字で無効
+
+# ---------------------------------------------------------------
+# 保護者向け: API 費用の上限
+#   単価は per MTok (USD)。価格改定があればここを更新してください。
+# ---------------------------------------------------------------
+budget:
+  monthly_yen: 1000      # 月の上限。0 で無制限
+  warn_at_percent: 80
+  usd_jpy: 155
+  prices:
+    claude-haiku-4-5: { input: 1.0, output: 5.0, cache_read: 0.1, cache_write: 1.25 }
+    claude-sonnet-5: { input: 3.0, output: 15.0, cache_read: 0.3, cache_write: 3.75 }
+    claude-opus-5: { input: 5.0, output: 25.0, cache_read: 0.5, cache_write: 6.25 }
+
+# ---------------------------------------------------------------
+# Raspberry Pi の配線 (BCM ピン番号)
+# ---------------------------------------------------------------
+hardware:
+  button_pin: 17       # 押しボタン (押している間だけ録音)
+  tail_servo_pin: 18   # しっぽサーボ
+  head_servo_pin: 27   # 首サーボ
+  eye_led_pin: 12      # 目 NeoPixel (PWM が使えるピン)
+  eye_led_count: 2
+  cheek_led_pin: 13    # ほっぺ NeoPixel
+  cheek_led_count: 2
+  led_brightness: 0.4
+
+# データの保存先 (プロフィール・ログ・使用量・音声キャッシュ)
+data_dir: "data"
