@@ -99,9 +99,13 @@ def main(argv: list[str] | None = None) -> int:
                 '`pip install -e ".[audio]"` を実行するか、`--text` を使ってください。'
             )
             return 1
-        components = build_voice_components(
-            config=config, persona=persona, console=console, use_pi=not args.mock
-        )
+        try:
+            components = build_voice_components(
+                config=config, persona=persona, console=console, use_pi=not args.mock
+            )
+        except RuntimeError as exc:
+            console.print(f"[red]{exc}[/red]")
+            return 1
         source = components.source
         voice = components.voice
         body = components.body

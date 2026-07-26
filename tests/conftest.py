@@ -36,12 +36,20 @@ def profile() -> Profile:
 class FakeClient:
     """スクリプト済みの返事を1デルタずつ返す擬似 ChatClient。"""
 
-    def __init__(self, replies: list[str] | None = None, *, chunk: int = 3) -> None:
+    def __init__(
+        self,
+        replies: list[str] | None = None,
+        *,
+        chunk: int = 3,
+        json_results: list[dict | None] | None = None,
+    ) -> None:
         self.replies = list(replies or [])
         self.chunk = chunk
         self.model = "fake-model"
         self.last = ReplyMeta()
         self.calls: list[list[dict]] = []
+        self.json_calls: list[str] = []
+        self.json_results = list(json_results or [])
         self.refuse = False
 
     def stream_reply(self, system: str, messages: list[dict]) -> Iterator[str]:
@@ -59,7 +67,10 @@ class FakeClient:
             model=self.model,
         )
 
-    def complete_json(self, **kwargs):  # pragma: no cover - 既定では使わない
+    def complete_json(self, **kwargs):
+        self.json_calls.append(kwargs.get("user", ""))
+        if self.json_results:
+            return self.json_results.pop(0)
         return None
 
 
