@@ -15,7 +15,7 @@
 
 | 部品 | 目安 | リンク | 備考 |
 |---|---|---|---|
-| Raspberry Pi 5 (4GB) | 約1.2万円 | [B0CPDJ8FNK](https://www.amazon.co.jp/dp/B0CPDJ8FNK) | **技適マーク付きを買うこと。** 8GB 版は [B0CQZHN2K4](https://www.amazon.co.jp/dp/B0CQZHN2K4) |
+| Raspberry Pi 5 (4GB) | 約1.2万円 | [B0CPDJ8FNK](https://www.amazon.co.jp/dp/B0CPDJ8FNK) / [スイッチサイエンス](https://www.switch-science.com/products/9249) | **技適マーク付きを買うこと**（商品名に明記があるもの）。国内正規代理店のほうが確実 |
 | USB-C 電源 27W (5V/5A) | 約2,000円 | [B0CQ2DL2RW](https://www.amazon.co.jp/dp/B0CQ2DL2RW) | **PSE 認証品を。** 5V/5A でないと USB 機器が 600mA に制限される（後述） |
 | USB マイク | 約1,000円 | [B08K9348F6](https://www.amazon.co.jp/dp/B08K9348F6) | ドライバ不要のもの。**ReSpeaker HAT は Pi 5 では避ける**（後述） |
 | USB スピーカー | 約1,500円 | [B07D7TV5J3](https://www.amazon.co.jp/dp/B07D7TV5J3) | USB 給電＋3.5mm 入力。USB オーディオ一体型でも可 |
@@ -30,6 +30,26 @@
 音声認識（faster-whisper small int8）が約0.5GB、VOICEVOX が約1GB。
 アプリ本体は数十MBなので、4GB あれば余裕があります。
 2026年はメモリ価格が上がっているので、8GB に払う価値は薄いです。
+
+### なぜ Pi 4 ではなく Pi 5 なのか
+
+**このロボットの応答速度は、ほぼ音声認識の速度で決まります。** whisper は GPU も
+専用アクセラレータも使わず CPU で回るので、CPU 性能がそのまま「子供を待たせる秒数」
+になります。
+
+Pi 5 は Cortex-A76 2.4GHz、Pi 4 は Cortex-A72 1.5GHz で、**CPU 性能は 2〜3倍**の差。
+メモリ帯域も約2倍あります。ここは素直に効きます。
+
+Whisper 系モデルを Raspberry Pi 各機種で評価した研究でも、**Pi 5 の 4GB 版が
+もっともコストパフォーマンスが良い**という結論になっています。同じ研究で、
+`small` は Pi 5 でもリアルタイムを下回る（＝話した長さより認識に時間がかかる）と
+報告されているので、**実機では `stt.model_size: base` を既定にしてください。**
+
+Pi 4 を選ぶと `base` でも待ち時間が倍近くになり、返事まで6〜8秒級になります。
+相づちで間を埋めてはいますが、この長さは子供には厳しいです。
+
+Pi 5 の代償は「5V/5A 電源が要る」「発熱するので冷却が要る」の2点ですが、
+**据え置き運用ならどちらも問題になりません。**
 
 ### なぜ ReSpeaker 2-Mics Pi HAT を勧めないのか
 
