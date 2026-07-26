@@ -72,6 +72,7 @@ def build_voice_components(
         samplerate=config.audio.sample_rate,
         max_seconds=config.audio.max_record_seconds,
         device=config.audio.input_device,
+        silence_rms=config.audio.silence_rms,
     )
     source = VoiceInput(
         recorder=recorder,

@@ -61,6 +61,8 @@ class AudioConfig(BaseModel):
     max_record_seconds: float = 15.0
     input_device: int | str | None = None
     output_device: int | str | None = None
+    # これ未満の音量を「無音」とみなす。うるさい部屋では上げる
+    silence_rms: float = 0.015
 
 
 class FillerConfig(BaseModel):

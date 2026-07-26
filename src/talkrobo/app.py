@@ -29,6 +29,9 @@ from .states import Emotion, RobotState
 
 log = logging.getLogger(__name__)
 
+# 何回続けて聞き取れなかったら、大人向けのヒントを出すか
+UNHEARD_HINT_AFTER = 3
+
 
 class FillerController(Protocol):
     """考え中の相づちを出す係（Phase 2 で実装）。"""
@@ -79,6 +82,7 @@ class TalkRobo:
         # 会話を打ち切るべきか（時間制限・予算上限）。理由の文字列を返すと終了する
         self.should_stop = should_stop
 
+        self._unheard_streak = 0
         self.history = History(max_turns=config.llm.history_turns)
         self.system_prompt = build_system_prompt(
             persona,
@@ -132,8 +136,10 @@ class TalkRobo:
                 if not text.strip():
                     self._stop_filler()
                     self.say_line("not_heard", emotion=Emotion.KOMATTA)
+                    self._on_nothing_heard()
                     continue
 
+                self._unheard_streak = 0
                 if self.recorder:
                     self.recorder.record_user(text)
                 self.respond(text)
@@ -141,6 +147,24 @@ class TalkRobo:
             self.console.print()
             self._stop_filler()
             self.say_line("farewell", emotion=Emotion.URESHII)
+
+    def _on_nothing_heard(self) -> None:
+        """何度も聞き取れないときは、大人に向けて原因の見当を出す。
+
+        子供には「よくきこえなかったよ」としか言わないので、設定の問題だと
+        気づけない。3回続いたら一度だけ画面にヒントを出す。
+        """
+        self._unheard_streak += 1
+        if self._unheard_streak != UNHEARD_HINT_AFTER:
+            return
+        self.console.print(
+            "\n[yellow]何度か聞き取れていません。次を確認してください:[/yellow]\n"
+            "  ・Windows の設定でマイクへのアクセスが許可されているか\n"
+            "  ・`--devices` で表示されるマイクが config.yaml の "
+            "audio.input_device と合っているか\n"
+            "  ・声が小さい場合は config.yaml の audio.silence_rms を下げる"
+            "（例 0.008）\n"
+        )
 
     def _on_captured(self) -> None:
         """入力を取り終えた瞬間（＝内容が確定する前）に呼ばれる。"""

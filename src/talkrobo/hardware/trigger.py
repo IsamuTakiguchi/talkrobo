@@ -6,16 +6,42 @@
 
 from __future__ import annotations
 
+import logging
+import sys
 from typing import Protocol, runtime_checkable
 
 from rich.console import Console
 
 from ..listen import QUIT_WORDS
 
+log = logging.getLogger(__name__)
+
 # 話し始める前に許す無音の長さ（これを超えたら「何も言わなかった」とみなす）
 LEADING_GRACE_SEC = 4.0
 # 話し終わったと判断する無音の長さ
 TRAILING_SILENCE_SEC = 1.0
+
+
+def drain_pending_keys() -> None:
+    """溜まっているキー入力を捨てる。
+
+    起動時はモデルの読み込みなどで数分待たされる。その間に押された Enter が
+    バッファに残っていると、プロンプトが出た瞬間に次々と消費されてしまい、
+    「Enter を押していないのに先へ進む」状態になる。
+    """
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            while msvcrt.kbhit():
+                msvcrt.getwch()
+        else:
+            import termios
+
+            if sys.stdin.isatty():
+                termios.tcflush(sys.stdin, termios.TCIFLUSH)
+    except Exception:  # pragma: no cover - 端末に依存する
+        log.debug("キー入力バッファの掃除に失敗しました", exc_info=True)
 
 
 @runtime_checkable
@@ -44,13 +70,19 @@ class KeyboardTrigger:
         self._trailing_silence = trailing_silence
 
     def wait_for_start(self) -> bool:
+        # 起動待ちの間に押された Enter が残っていると、勝手に先へ進んでしまう
+        drain_pending_keys()
         try:
             answer = self._console.input(
-                "\n[dim]Enter を押して話しかけてね（終わるときは「ばいばい」＋Enter）[/dim] "
+                "\n[bold green]Enter[/bold green] を押して話しかけてね"
+                "  [dim]（終わるときは「ばいばい」＋Enter）[/dim] "
             ).strip()
         except (EOFError, KeyboardInterrupt):
             return False
-        return answer.lower() not in QUIT_WORDS
+        if answer.lower() in QUIT_WORDS:
+            return False
+        self._console.print("[bold]🎤 どうぞ[/bold] [dim]（話し終えて1秒黙ると止まります）[/dim]")
+        return True
 
     def should_continue(self, elapsed: float, silence: float, speech_detected: bool) -> bool:
         if not speech_detected:
