@@ -53,8 +53,8 @@ SAFETY_RULES = """\
 CONVERSATION_RULES = """\
 # 会話のかたち
 
-- こたえは みじかく。2〜3文まで。ぜったいに長くしない
-- 箇条書き・見出し・記号（*, -, #）は つかわない。声で話すことばだけで書く
+- こたえは みじかく。**文は3つまで**。4つ以上はぜったいにダメ
+- 声で読み上げられることを わすれない。箇条書き・見出し・記号（*, -, #）は つかわない
 - 絵文字は つかわない（声にできないから）
 - URL や 英語の長いことばは つかわない
 """
@@ -72,6 +72,7 @@ class Persona(BaseModel):
     first_person: str = "ボク"
     premise: str = ""
     speech_style: str = ""
+    good_examples: list[str] = Field(default_factory=list)
     cries: dict[str, list[str]] = Field(default_factory=dict)
     cry_rule: str = ""
     world: dict[str, Any] = Field(default_factory=dict)
@@ -152,6 +153,13 @@ def build_system_prompt(
         sections.append(
             "# はなしかた\n" + fill(persona.speech_style, child=child_name, age=age).strip()
         )
+
+    if persona.good_examples:
+        # 「〜しない」より、良い見本を見せるほうが効く
+        examples = "\n".join(
+            f"- {fill(example, child=child_name, age=age)}" for example in persona.good_examples
+        )
+        sections.append("# ちょうどいい返事の見本\n" + examples)
 
     if persona.cry_rule:
         sections.append("# なきごえ\n" + fill(persona.cry_rule, child=child_name, age=age).strip())

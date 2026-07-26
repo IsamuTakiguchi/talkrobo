@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +19,17 @@ log = logging.getLogger(__name__)
 
 # 単価表に無いモデルが来たときの保守的な既定値（高めに見積もる）
 UNKNOWN_PRICE = PriceRow(input=5.0, output=25.0, cache_read=0.5, cache_write=6.25)
+
+# API のレスポンスは日付付きの ID を返すことがある
+#   例: claude-haiku-4-5 → claude-haiku-4-5-20251001
+# Amazon Bedrock 経由では anthropic. の接頭辞も付く
+_DATE_SUFFIX = re.compile(r"-\d{8}$")
+_PROVIDER_PREFIX = re.compile(r"^(anthropic|us|eu|apac)\.")
+
+
+def normalize_model_id(model: str) -> str:
+    """レスポンスのモデル ID を、単価表のキー（エイリアス）に揃える。"""
+    return _DATE_SUFFIX.sub("", _PROVIDER_PREFIX.sub("", model.strip()))
 
 
 class BudgetTracker:
@@ -35,6 +47,9 @@ class BudgetTracker:
     # ------------------------------------------------------------------
     def price_for(self, model: str) -> PriceRow:
         price = self._prices.get(model)
+        if price is None:
+            # API は日付付きの ID を返すことがあるので、エイリアスに揃えて引き直す
+            price = self._prices.get(normalize_model_id(model))
         if price is None:
             log.warning("単価表に %s がありません。高めの既定値で計算します。", model)
             return UNKNOWN_PRICE

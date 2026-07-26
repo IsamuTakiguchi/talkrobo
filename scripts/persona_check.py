@@ -5,8 +5,10 @@
   1. 感情タグが正しく付いている（からだの動きがこれに依存する）
   2. 鳴き声が1回以上入っている
   3. 子供の名前がちょうど1回だけ出てくる（0回だと他人行儀、2回以上はくどい）
-  4. 2〜3文に収まっている
-  5. 「トレーナー」などの役割名で呼んでいない
+  4. 3文までに収まっている
+  5. 漢字が混ざっていない（6歳児が音で聞いて分かることば）
+  6. 「です・ます」調になっていない（ともだちとして話す）
+  7. 「トレーナー」などの役割名で呼んでいない
 
 使い方:
     python scripts/persona_check.py [--model claude-opus-5] [--name はると]
@@ -57,6 +59,8 @@ QUESTIONS = [
 
 CRY = re.compile(r"ピカ|ピッカ|チュウ|チュ〜")
 SENTENCE_END = re.compile(r"[。！？!?…]")
+KANJI = re.compile(r"[一-鿿]")
+POLITE = re.compile(r"(です|ます|ました|でした|ください)[。！？!?…]?")
 ROLE_WORDS = ("トレーナー", "マスター", "ごしゅじん")
 
 PASS_THRESHOLD = 0.90
@@ -72,7 +76,9 @@ def check(reply: str, emotion_ok: bool, name: str) -> dict[str, bool]:
         "感情タグ": emotion_ok,
         "鳴き声": bool(CRY.search(reply)),
         "名前1回": reply.count(name) == 1,
-        "2〜3文": 1 <= count_sentences(reply) <= 3,
+        "3文まで": 1 <= count_sentences(reply) <= 3,
+        "漢字なし": not KANJI.search(reply),
+        "ですます無": not POLITE.search(reply),
         "役割名なし": not any(word in reply for word in ROLE_WORDS),
     }
 

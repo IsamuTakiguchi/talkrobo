@@ -291,7 +291,7 @@ pytest -q                      # テスト（API・マイク・GPIO なしで完
 ruff check src tests           # 静的チェック
 ruff format src tests          # 整形
 
-python scripts/persona_check.py   # キャラクターが保てているかを20問で評価
+python scripts/persona_check.py   # キャラクター維持を20問で採点（3文まで・漢字なし・名前1回 など）
 python scripts/latency_check.py   # 返事までの時間を実測
 python scripts/cost_estimate.py   # 実トークン数から月額を試算
 ```
