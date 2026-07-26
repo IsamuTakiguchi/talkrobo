@@ -334,7 +334,8 @@ src/talkrobo/
 |---|---|
 | `ANTHROPIC_API_KEY が設定されていません` | `cp .env.example .env` して API キーを記入 |
 | `VOICEVOX ENGINE に接続できません` | `docker run -d -p 50021:50021 voicevox/voicevox_engine:cpu-ubuntu20.04-latest` |
-| `PortAudio library not found` | `sudo apt install -y libportaudio2 libsndfile1` |
+| `PortAudio library not found`（Linux） | `sudo apt install -y libportaudio2 libsndfile1` |
+| `cannot load library ...libportaudioarm64.dll` | ARM 版 Windows（Copilot+ PC など）で起きます。`git pull` で最新にすれば自動で回避されます（`src/talkrobo/audio/_win_arm.py`）。なお ARM 版 Windows では音声認識が x64 エミュレーションで動くため遅く、`stt.model_size` を `base` にするのがおすすめです |
 | 返事が遅い | `stt.model_size` を `base` に、`llm.model` を `claude-haiku-4-5` に |
 | 名前を間違えて覚えた | `python -m talkrobo --setup` で聞き直す |
 | 録音がすぐ止まる／止まらない | `audio` の入力デバイスを確認。周囲がうるさい場合は `src/talkrobo/audio/recorder.py` の `DEFAULT_SILENCE_RMS` を調整 |
