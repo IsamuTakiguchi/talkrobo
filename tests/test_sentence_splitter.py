@@ -14,10 +14,36 @@ def test_splits_on_terminator():
     assert feed_all(s, ["ピカ！", "こんにちは！"]) == ["ピカ！", "こんにちは！"]
 
 
-def test_first_sentence_emits_without_waiting_for_more_input():
-    """1文目は区切り文字が来た瞬間に確定する（体感レイテンシの要）。"""
+def test_period_emits_without_waiting_for_more_input():
+    """「。」は後ろに何も続かないので、その場で確定する（体感レイテンシの要）。"""
     s = SentenceSplitter()
-    assert s.feed("ピカ！") == ["ピカ！"]
+    assert s.feed("げんきだよ。") == ["げんきだよ。"]
+
+
+def test_exclamation_waits_one_delta_then_emits():
+    """「！」は「!?」になりうるので1デルタだけ待ち、次が来たら確定する。"""
+    s = SentenceSplitter()
+    assert s.feed("ピカ！") == []
+    assert s.feed("こ") == ["ピカ！"]
+
+
+def test_combined_punctuation_survives_delta_boundaries():
+    """1文字ずつ届いても「!?」の2文字目を落とさないこと。"""
+    s = SentenceSplitter()
+    out: list[str] = []
+    for char in "ピカッ!?すごい。":
+        out.extend(s.feed(char))
+    out.extend(s.flush())
+    assert out == ["ピカッ!?", "すごい。"]
+
+
+def test_fullwidth_combined_punctuation_survives():
+    s = SentenceSplitter()
+    out: list[str] = []
+    for char in "いちばん！？":
+        out.extend(s.feed(char))
+    out.extend(s.flush())
+    assert out == ["いちばん！？"]
 
 
 def test_terminator_split_across_deltas():
@@ -47,11 +73,19 @@ def test_long_text_without_terminator_is_force_split():
 
 def test_flush_returns_remainder():
     s = SentenceSplitter()
-    s.feed("ピカ！")
+    s.feed("げんきだよ。")
     assert s.flush() == []
+
     s2 = SentenceSplitter()
     s2.feed("とちゅうでおわり")
     assert s2.flush() == ["とちゅうでおわり"]
+
+
+def test_flush_picks_up_a_sentence_that_was_waiting_for_punctuation():
+    """「！」で終わったまま応答が終わっても、取り残されないこと。"""
+    s = SentenceSplitter()
+    assert s.feed("ピカ！") == []
+    assert s.flush() == ["ピカ！"]
 
 
 def test_newline_is_a_terminator():
