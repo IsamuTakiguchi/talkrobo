@@ -19,7 +19,7 @@ from .client import ChatClient
 
 log = logging.getLogger(__name__)
 
-MAX_FACTS = 30
+MAX_FACTS = 40
 
 
 class ChildProfile(BaseModel):
@@ -165,7 +165,7 @@ _FACT_SCHEMA = {
         "facts": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "次回の会話で役立つ、子供についての短い事実",
+            "description": "子供が教えてくれたこと、または子供についての短い事実",
         }
     },
     "required": ["facts"],
@@ -174,15 +174,28 @@ _FACT_SCHEMA = {
 
 _FACT_SYSTEM = """\
 あなたは子供向け会話ロボットの記憶係です。
-会話ログから「次回このロボットが子供と話すときに覚えておくと嬉しい事実」を抜き出します。
+会話ログから「次回このロボットが子供と話すときに覚えておくべきこと」を抜き出します。
+
+覚えるもの（優先順）:
+
+1. 子供が教えてくれたこと ← いちばん大事
+   ロボットが知らなかったことば・遊び・キャラクター・歌などを子供が説明して
+   くれた場合は、かならず残す。「なにが」「どういうものか」が分かる形で書く。
+   例:「ブンブンごまは ひもをねじってまわすおもちゃ」
+       「すきなうたは Mrs. GREEN APPLE の ケセラセラ」
+       「"バグる"は うまく うごかないという意味」
+
+2. 子供についての事実
+   好きなもの・苦手なもの・家族やペット・習い事・くり返し出てくる話題。
+   例:「きょうりゅうがすき」「いもうとの名前はさくら」
 
 ルール:
-- 1件は20文字以内の短い日本語で書く（例: 「きょうりゅうがすき」「いもうとの名前はさくら」）
-- 好きなもの・苦手なもの・家族やペット・習い事・最近の出来事 を優先する
+- 1件は30文字以内の短い日本語で書く
+- 教えてもらったことは、次に同じ話が出たときロボットが分かる書き方にする
 - 住所・電話番号・学校名など、特定につながる個人情報は書かない
-- 一時的なこと（今日の天気など）は書かない
+- その日かぎりのこと（今日の天気、今日の勝ち負け）は書かない
 - 該当が無ければ空の配列を返す
-- 最大5件まで
+- 最大6件まで
 """
 
 
@@ -201,7 +214,7 @@ def extract_facts(client: ChatClient, history: History) -> list[str]:
     facts = result.get("facts")
     if not isinstance(facts, list):
         return []
-    return [str(f) for f in facts if isinstance(f, str | int | float)][:5]
+    return [str(f) for f in facts if isinstance(f, str | int | float)][:6]
 
 
 def save_session_memory(
