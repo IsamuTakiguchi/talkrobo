@@ -171,10 +171,25 @@ def _print_text_mode_help(console: Console, persona: Persona) -> None:
 
 
 def _show_devices(console: Console) -> int:
+    # 音声まわりの不具合はアーキテクチャの食い違いが原因のことがあるので先に出す
+    import platform
+    import sysconfig
+
+    from .audio import use_process_architecture  # 読み込み前に環境を整える
+
+    use_process_architecture()
+    console.print(
+        f"[dim]Python: {platform.python_version()} / ビルド: {sysconfig.get_platform()}"
+        f" / machine: {platform.machine()}[/dim]\n"
+    )
+
     try:
         import sounddevice as sd
     except ImportError:
         console.print('[red]sounddevice がありません。`pip install -e ".[audio]"`[/red]')
+        return 1
+    except OSError as exc:
+        console.print(f"[red]音声ライブラリを読み込めません:[/red] {exc}")
         return 1
     console.print(str(sd.query_devices()))
     return 0
