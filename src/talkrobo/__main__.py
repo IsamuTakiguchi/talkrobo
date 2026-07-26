@@ -24,6 +24,7 @@ from .listen import TextInput
 from .llm.client import ChatClient
 from .llm.memory import load_or_build_profile, save_session_memory
 from .llm.onboarding import run_onboarding
+from .parental.session import build_guards
 from .persona import Persona
 from .tts.print_voice import PrintVoice
 
@@ -83,8 +84,6 @@ def main(argv: list[str] | None = None) -> int:
     body = MockBody(persona, console)
     wav_cache: dict[str, Path] = {}
     filler = None
-    recorder = None
-    should_stop = None
 
     if text_mode:
         source = TextInput(console)
@@ -116,28 +115,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.setup:
         needs_onboarding = True
 
-    try:
-        if needs_onboarding:
-            profile = run_onboarding(
-                config=config,
-                persona=persona,
-                profile=profile,
-                client=client,
-                source=source,
-                voice=voice,
-                body=body,
-                wav_cache=wav_cache,
-            )
-            if args.setup:
-                console.print(f"[green]なまえを設定しました:[/green] {profile.child.call_name}")
-                return 0
-
-        # Phase 4 の保護者機能（ログ・時間制限・予算上限）
-        from .parental.session import build_guards
-
-        recorder, should_stop = build_guards(config, console)
-
-        robo = TalkRobo(
+    if needs_onboarding:
+        profile = run_onboarding(
             config=config,
             persona=persona,
             profile=profile,
@@ -145,24 +124,41 @@ def main(argv: list[str] | None = None) -> int:
             source=source,
             voice=voice,
             body=body,
-            filler=filler,
-            recorder=recorder,
             wav_cache=wav_cache,
-            console=console,
-            should_stop=should_stop,
         )
-        try:
-            robo.run()
-        finally:
-            robo.close()
+        if args.setup:
+            console.print(f"[green]なまえを設定しました:[/green] {profile.child.call_name}")
+            voice.close()
+            source.close()
+            body.close()
+            return 0
 
-        # セッション終了後に1回だけ記憶を抽出する（会話中のレイテンシに影響させない）
-        added = save_session_memory(config, client, profile, robo.history)
-        if added:
-            console.print(f"[dim]（{added}件、おぼえました）[/dim]")
+    # 保護者向けの記録係と、会話を打ち切る判定（時間制限・予算上限）
+    recorder, should_stop = build_guards(config, console)
 
+    robo = TalkRobo(
+        config=config,
+        persona=persona,
+        profile=profile,
+        client=client,
+        source=source,
+        voice=voice,
+        body=body,
+        filler=filler,
+        recorder=recorder,
+        wav_cache=wav_cache,
+        console=console,
+        should_stop=should_stop,
+    )
+    try:
+        robo.run()
     finally:
-        pass
+        robo.close()
+
+    # セッション終了後に1回だけ記憶を抽出する（会話中のレイテンシに影響させない）
+    added = save_session_memory(config, client, profile, robo.history)
+    if added:
+        console.print(f"[dim]（{added}件、おぼえました）[/dim]")
 
     return 0
 

@@ -23,6 +23,9 @@ class EmotionTagExtractor:
         self._buffer = ""
         self._resolved = False
         self.emotion: Emotion = Emotion.FUTSUU
+        # タグが実際に見つかったか。「タグ無し」と「ふつうタグ」を区別する
+        # （ペルソナ評価でタグ出力の遵守率を測るのに使う）
+        self.tag_found = False
 
     @property
     def resolved(self) -> bool:
@@ -51,6 +54,7 @@ class EmotionTagExtractor:
         end = stripped.find(closer)
         if end != -1:
             self.emotion = Emotion.parse(stripped[1:end])
+            self.tag_found = True
             self._resolved = True
             self._buffer = ""
             return stripped[end + 1 :]

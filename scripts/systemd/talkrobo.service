@@ -1,0 +1,29 @@
+; Raspberry Pi で自動起動させる場合の systemd ユニット。
+;
+;   sudo cp scripts/systemd/talkrobo.service /etc/systemd/system/
+;   sudo systemctl daemon-reload
+;   sudo systemctl enable --now talkrobo
+;   journalctl -u talkrobo -f          # ログを見る
+;
+; パス・ユーザー名は環境に合わせて書き換えてください。
+
+[Unit]
+Description=talkrobo (子供向け会話ロボット)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/talkrobo
+EnvironmentFile=/home/pi/talkrobo/.env
+ExecStart=/home/pi/talkrobo/.venv/bin/python -m talkrobo
+Restart=on-failure
+RestartSec=5
+
+; NeoPixel は /dev/mem へのアクセスに root 権限が必要な場合がある。
+; その場合は User=root にするか、pi ユーザーを gpio グループに追加すること。
+; SupplementaryGroups=gpio audio
+
+[Install]
+WantedBy=multi-user.target

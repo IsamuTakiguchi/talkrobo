@@ -33,6 +33,18 @@ def test_no_tag_passes_through():
     assert emotion is Emotion.FUTSUU
 
 
+def test_tag_found_distinguishes_missing_tag_from_futsuu_tag():
+    """「タグ無し」と「[ふつう]タグあり」は区別できること（評価スクリプトが使う）。"""
+    missing = EmotionTagExtractor()
+    missing.feed("ピカ！")
+    assert not missing.tag_found
+
+    present = EmotionTagExtractor()
+    present.feed("[ふつう]ピカ！")
+    assert present.tag_found
+    assert present.emotion is Emotion.FUTSUU
+
+
 def test_unknown_tag_falls_back_to_futsuu():
     text, emotion = drain(["[しらないきもち]ピカ！"])
     assert text == "ピカ！"
